@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500" rel="stylesheet">
+    <link href="../../static/style.css" type="text/css" rel="stylesheet">
+    <link href="../../static/jquery.colorpicker.css" rel="stylesheet">
+    <script src="../../static/jquery-ui.min.js" type="text/javascript"></script>
+    <script src="../../static/jquery.colorpicker.js"></script>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css"
+          integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+    <title>Edit place</title>
+</head>
+<body>
+<h1 class="header_text">
+    Wine Picker Control Panel
+</h1>
+<a class="entry_edit small" id="home_button">
+    <div>Main page <i class="fas fa-home"></i></div>
+</a>
+<div class="row">
+    <div class="column">
+        <div class="call_container">
+            <label class="api_input balanced" for="website_url">
+                Website url
+            </label>
+            <input type="text" id="website_url" class="api_input_field balanced"
+                   placeholder="Enter your website url here">
+        </div>
+        <div class="call_container" id="main_color_container">
+            <label class="api_input" for="main_color">
+                Choose main colour for your bot
+            </label>
+            <input type="text" id="main_color" class="color_picker"/>
+        </div>
+        <div class="call_container" id="user_color_container">
+            <label class="api_input" for="user_color">
+                Choose the color of user messages
+            </label>
+            <input type="text" id="user_color" class="color_picker"/>
+        </div>
+    </div>
+    <div class="column">
+        <div class="call_container">
+            <label class="api_input" for="default_message">
+                Default welcome message for your bot
+            </label>
+            <input type="text" id="default_message" class="message"
+                   placeholder="Hey, welcome! Shall we drink some wine?">
+        </div>
+        <div class="call_container">
+            <label class="api_input" for="widget_avatar">
+                Widget avatar
+            </label>
+            <form id="upload_form" action="" method="post" enctype="multipart/form-data">
+                <input type="file" name="widget_avatar" id="widget_avatar">
+            </form>
+        </div>
+    </div>
+    <div class="column" id="last">
+        <div class="call_container">
+            <label class="api_input small">
+                Widget state
+            </label>
+            <div class="disable_button active">
+                <i class="fas fa-toggle-on"></i>
+                <i class="fas fa-toggle-off"></i>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="call_button">
+    Send
+</div>
+</body>
+<script>
+    jQuery(document).ready(($) => {
+        $('.color_picker').colorpicker({
+            parts: ['map', 'bar', 'footer'],
+            showOn: 'both',
+            buttonColorize: true,
+            colorFormat: 'HEX'
+        });
+        let currentPath = window.location.protocol + '//' + window.location.hostname;
+        $('#home_button').attr('href', currentPath);
+        let active;
+
+        $('.disable_button').on('click', function () {
+            if ($(this).hasClass('active')) {
+                $(this).removeClass('active');
+                $(this).addClass('disabled');
+                active = $(this).hasClass('active');
+            } else {
+                $(this).removeClass('disabled');
+                $(this).addClass('active');
+                active = $(this).hasClass('active');
+            }
+        });
+
+        let currentPlace = /\/edit\/(\d*)/i.exec(window.location.pathname)[1];
+        $('#upload_form').attr('action', currentPath + '/uploadImage?place='+currentPlace);
+        // console.log(currentPlace);
+
+        let myInit = {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'}
+        };
+        let currentAvatar;
+        let request = new Request(currentPath + '/getEditedPlace?place=' + currentPlace, myInit);
+        fetch(request).then((response) => {
+            return response.json();
+        }).then((jsonResponse) => {
+            // console.log(jsonResponse);
+            $('#website_url').val(jsonResponse.website_url);
+            $('#main_color').val(jsonResponse.main_color);
+            $('#main_color').attr('value', jsonResponse.main_color);
+            $('#user_color').val(jsonResponse.user_color);
+            $('#user_color').attr('value', jsonResponse.user_color);
+            $('#main_color_container').find('.ui-button').find('img').css('background', '#' + jsonResponse.main_color);
+            $('#user_color_container').find('.ui-button').find('img').css('background', '#' + jsonResponse.user_color);
+            $('#default_message').val(jsonResponse.default_message);
+            // $('#main_color').attr('value')
+            // $('#widget_avatar').val(jsonResponse.widget_avatar);
+            if (jsonResponse.active === 'true') {
+                $('.disable_button').removeClass('disabled');
+                $('.disable_button').addClass('active');
+                active = $('.disable_button').hasClass('active');
+            } else {
+                $('.disable_button').removeClass('active');
+                $('.disable_button').addClass('disabled');
+                active = $('.disable_button').hasClass('active');
+            }
+            // console.log(active);
+            currentAvatar = jsonResponse.widget_avatar;
+        });
+        $('.call_button').on('click', () => {
+            $('#upload_form').submit();
+            let website_url = $('#website_url').val();
+            let main_color = $('#main_color').val();
+            let user_color = $('#user_color').val();
+            let default_message = $('#default_message').val() || 'Hello, my name is Gaspar. I will be your sommelier tonight';
+            let widget_avatar = $('#widget_avatar').val() || currentAvatar;
+            let data = 'place_id=' + currentPlace + '&website_url=' + website_url + '&main_color=' + main_color + '&user_color=' + user_color + '&default_message=' + default_message + '&widget_avatar=' + widget_avatar + '&active=' + active;
+            // console.log(data);
+            let myInit = {
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'}
+            };
+            let request = new Request(currentPath + '/editPlace?' + data, myInit);
+            fetch(request).then((response) => {
+                // console.log(response);
+                if (response.status === 200) {
+                    let support = document.createElement('div');
+                    $(support).css({opacity: '0', top: '-50px'});
+                    $(support).addClass('support');
+                    $(support).animate({opacity: '0.7', top: '20px'}, 600);
+                    support.addEventListener('click', function () {
+                        $(this).animate({right: '+=30'}, 300, () => {
+                            $(this).animate({right: '-300px'}, 600, () => {
+                                $(this).remove();
+                            });
+                        });
+                    });
+                    $(support).append(response.statusText);
+                    $('body').append(support);
+                    setTimeout(() => {
+                        $(support).animate({right: '+=30'}, 300, () => {
+                            $(support).animate({right: '-300px'}, 600, () => {
+                                $(support).remove();
+                            });
+                        });
+                    }, 5500);
+                }
+                return response.json();
+            }).then((jsonResponse) => {
+                // console.log(jsonResponse);
+            });
+
+        });
+
+        function getRandomId(min, max) {
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+    });
+</script>
+</html>
