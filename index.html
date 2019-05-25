@@ -29,6 +29,13 @@
                    placeholder="Enter your website url here">
         </div>
         <div class="call_container">
+            <label class="api_input balanced" for="website_url">
+                Website url
+            </label>
+            <input type="text" id="place_id" class="api_input_field balanced"
+                   placeholder="Enter your place id">
+        </div>
+        <div class="call_container">
             <label class="api_input" for="main_color">
                 Choose main colour for your bot
             </label>
@@ -97,7 +104,7 @@
         });
 
         $('.call_button').on('click', () => {
-            let place = getRandomId(1000, 9999);
+            let place = $('#place_id').val() || getRandomId(1000, 9999);
             let website_url = $('#website_url').val();
             let main_color = $('#main_color').val();
             let user_color = $('#user_color').val();

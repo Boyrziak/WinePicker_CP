@@ -28,6 +28,13 @@
             <input type="text" id="website_url" class="api_input_field balanced"
                    placeholder="Enter your website url here">
         </div>
+        <div class="call_container">
+            <label class="api_input balanced" for="website_url">
+                Website url
+            </label>
+            <input type="text" id="place_id" class="api_input_field balanced"
+                   placeholder="Enter your place id">
+        </div>
         <div class="call_container" id="main_color_container">
             <label class="api_input" for="main_color">
                 Choose main colour for your bot
@@ -73,6 +80,24 @@
 <div class="call_button">
     Send
 </div>
+<div id="snippet_container">
+    <div id="snippet_generation">
+        Insert this code in the footer of your web-site
+        <div id="code_pane">
+            &lt;script src="https://www.wine-manager.com/red/js/jquery.js" type="text/javascript">&lt;/script> <br>
+            &lt;script src="https://www.wine-manager.com/red/js/jquery-ui.min.js"
+            type="text/javascript">&lt;/script><br>
+            &lt;script src="https://www.winepicker.co.uk/wp-content/themes/wine-picker-theme/js/app.js">&lt;/script><br>
+        </div>
+        <div id="toolbox">
+            Copied to clipboard
+        </div>
+        <div id="copy_content">
+            <i class="fas fa-copy"></i>
+            Copy to clipboard
+        </div>
+    </div>
+</div>
 </body>
 <script>
     jQuery(document).ready(($) => {
@@ -101,6 +126,14 @@
         let currentPlace = /\/edit\/(\d*)/i.exec(window.location.pathname)[1];
         $('#upload_form').attr('action', currentPath + '/uploadImage?place='+currentPlace);
         // console.log(currentPlace);
+        $('#code_pane').prepend('&lt;script&gt;\n' +
+        '            fetch("https://chatbot.wine-manager.com/httpTemplate/'+currentPlace+'").then(t=>t.text()).then(t=>{document.getElementsByTagName("body")[0].insertAdjacentHTML("beforeend",t)});\n' +
+        '        &lt;/script&gt;');
+        $('#snippet_container').show('drop', {direction: 'down'}, 600);
+
+        $('#copy_content').on('click', ()=>{
+            copyClip($('#code_pane'));
+        });
 
         let myInit = {
             method: 'GET',
@@ -136,12 +169,13 @@
         });
         $('.call_button').on('click', () => {
             $('#upload_form').submit();
+            let place = $('#place_id').val() || currentPlace;
             let website_url = $('#website_url').val();
             let main_color = $('#main_color').val();
             let user_color = $('#user_color').val();
             let default_message = $('#default_message').val() || 'Hello, my name is Gaspar. I will be your sommelier tonight';
             let widget_avatar = $('#widget_avatar').val() || currentAvatar;
-            let data = 'place_id=' + currentPlace + '&website_url=' + website_url + '&main_color=' + main_color + '&user_color=' + user_color + '&default_message=' + default_message + '&widget_avatar=' + widget_avatar + '&active=' + active;
+            let data = 'place_id=' + place + '&website_url=' + website_url + '&main_color=' + main_color + '&user_color=' + user_color + '&default_message=' + default_message + '&widget_avatar=' + widget_avatar + '&active=' + active;
             // console.log(data);
             let myInit = {
                 method: 'GET',
@@ -178,6 +212,15 @@
             });
 
         });
+
+        function copyClip(element) {
+            let $temp = $("<input>");
+            $("body").append($temp);
+            $temp.val($(element).text()).select();
+            document.execCommand("copy");
+            $temp.remove();
+            $('#toolbox').show('drop', {direction: 'down'}, 400);
+        }
 
         function getRandomId(min, max) {
             return Math.floor(Math.random() * (max - min)) + min;
