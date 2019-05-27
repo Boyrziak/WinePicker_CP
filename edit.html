@@ -8,6 +8,8 @@
     <link href="../../static/jquery.colorpicker.css" rel="stylesheet">
     <script src="../../static/jquery-ui.min.js" type="text/javascript"></script>
     <script src="../../static/jquery.colorpicker.js"></script>
+    <link href="../../static/croppie.css" rel="stylesheet">
+    <script src="../../static/croppie.js" type="text/javascript"></script>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css"
           integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
     <title>Edit place</title>
@@ -61,8 +63,14 @@
                 Widget avatar
             </label>
             <form id="upload_form" action="" method="post" enctype="multipart/form-data">
-                <input type="file" name="widget_avatar" id="widget_avatar">
+                <input type="file" accept="image/png, image/jpeg" name="widget_avatar" id="widget_avatar">
             </form>
+            <div class="upload_wrap">
+                <div class="upload_cropp"></div>
+                <div class="close_cropp">
+                    Accept
+                </div>
+            </div>
         </div>
     </div>
     <div class="column" id="last">
@@ -122,16 +130,49 @@
                 active = $(this).hasClass('active');
             }
         });
+        $('#widget_avatar').change((event)=>{
+           let target = event.target || window.event.srcElement;
+           let fileReader = new FileReader();
+           fileReader.onload = ()=>{
+               cropp.croppie('bind', {
+                  url: fileReader.result
+               });
+               $('.upload_wrap').show('drop', {direction: 'right'}, 500);
+           };
+            fileReader.readAsDataURL(target.files[0]);
+        });
+        let cropp_result;
+        let cropp = $('.upload_cropp').croppie({
+            viewport: {
+                width: 50,
+                height: 50,
+                type: 'circle'
+            },
+            boundary: {
+                width: 300,
+                height: 300
+            },
+            enableExif: true
+        });
+        $('.close_cropp').click(()=>{
+            $('.upload_wrap').hide('drop', {direction: 'right'}, 500);
+            cropp.croppie('result', {
+               type: 'blob',
+                size: 'viewport'
+            }).then((resp)=>{
+                cropp_result = resp || document.getElementById('widget_avatar').files[0];
+            });
+        });
 
         let currentPlace = /\/edit\/(\d*)/i.exec(window.location.pathname)[1];
-        $('#upload_form').attr('action', currentPath + '/uploadImage?place='+currentPlace);
+        $('#upload_form').attr('action', currentPath + '/uploadImage?place=' + currentPlace);
         // console.log(currentPlace);
         $('#code_pane').prepend('&lt;script&gt;\n' +
-        '            fetch("https://chatbot.wine-manager.com/httpTemplate/'+currentPlace+'").then(t=>t.text()).then(t=>{document.getElementsByTagName("body")[0].insertAdjacentHTML("beforeend",t)});\n' +
-        '        &lt;/script&gt;');
+            '            fetch("https://chatbot.wine-manager.com/httpTemplate/' + currentPlace + '").then(t=>t.text()).then(t=>{document.getElementsByTagName("body")[0].insertAdjacentHTML("beforeend",t)});\n' +
+            '        &lt;/script&gt;');
         $('#snippet_container').show('drop', {direction: 'down'}, 600);
 
-        $('#copy_content').on('click', ()=>{
+        $('#copy_content').on('click', () => {
             copyClip($('#code_pane'));
         });
 
@@ -169,7 +210,7 @@
             currentAvatar = jsonResponse.widget_avatar;
         });
         $('.call_button').on('click', () => {
-            $('#upload_form').submit();
+            // $('#upload_form').submit();
             let oldPlace = currentPlace;
             let newPlace = $('#place_id').val() || currentPlace;
             let website_url = $('#website_url').val();
@@ -213,6 +254,11 @@
                 // console.log(jsonResponse);
             });
 
+            let xhrRequest = new XMLHttpRequest();
+            let formData = new FormData();
+            formData.append('widget_avatar', cropp_result);
+            xhrRequest.open('POST', currentPath + '/uploadImage?place_id=' + newPlace);
+            xhrRequest.send(formData);
         });
 
         function copyClip(element) {

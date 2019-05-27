@@ -332,6 +332,10 @@ h1 {
     padding: 5px;
 }
 
+.upload_wrap {
+    display: none;
+}
+
 @media screen and (max-width: 1200px){
     .row {
         flex-direction: column;

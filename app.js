@@ -11,6 +11,7 @@ const
     mkdirp = require('mkdirp'),
     jsdom = require('jsdom'),
     MongoClient = require('mongodb').MongoClient,
+    sharp = require('sharp'),
     app = express(bodyParser.json()),
     mongoClient = new MongoClient("mongodb://localhost:27017/", {useNewUrlParser: true}),
     // dom = require('express-jsdom')(app),
@@ -19,16 +20,14 @@ port = 1603;
 
 // dom.use('jquery');
 
-let storage = multer.diskStorage({
-    destination: (req, file, callback) => {
-        callback(null, './uploads');
-    },
-    filename: (req, file, callback) => {
-        callback(null, file.fieldname + '-' + Date.now());
+const upload = multer({
+    limits: {
+        fileSize: 4 * 1024 * 1024,
     }
 });
 
 let approvedPages = ['/about', '/usage', '/instructions'];
+
 approvedPages.forEach((address) => {
     // router.get(address, ()=>{
     //    res.sendFile(path(__dirname + '/about.html'));
@@ -93,32 +92,8 @@ approvedPages.forEach((address) => {
     });
 });
 
-// router.get('/about', (req, res)=>{
-   // parseData(req.body, 'about');
-   //  require('jsdom').env("", function(err, window) {
-   //      if (err) {
-   //          console.error(err);
-   //          return;
-   //      }
-   //
-   //      let $ = require("jquery")(window);
-   //      let title = $('.title');
-   //      title.text(titleValue);
-   //      title.animate({fontSize: '30px', color: '#f1824a'}, 1500, function () {
-   //          $(this).animate({position: 'absolute', right: '100px'}, 1500);
-   //      });
-   //  });
-
-    // let currentURL = req.protocol + '://' + req.hostname;
-    // const {JSDOM} = jsdom;
-    // const domStructure = new JSDOM(``, {
-    //     url: currentURL
-    // });
-// });
-
-let upload = multer({storage: storage}).single('userPhoto');
-
 app.use('/', router);
+
 mongoClient.connect((err, client) => {
     if (err) {
         return console.log(err);
@@ -222,56 +197,79 @@ router.get('/APIWriteData', (req, res) => {
     });
 });
 
-router.post('/uploadImage', (req, res) => {
-    console.log('Place for image: ' + req.query.place);
-    console.log(req.files);
-    let dir = path.join(__dirname + '/images/' + req.query.place);
-    if (!fs.existsSync(dir)) {
-        fs.mkdir(dir, {recursive: true}, err => {
-        })
-    }
+// router.post('/uploadImage', (req, res) => {
+//     console.log('Place for image: ' + req.query.place);
+//     console.log(req.files);
+//     let dir = path.join(__dirname + '/images/' + req.query.place);
+//     if (!fs.existsSync(dir)) {
+//         fs.mkdir(dir, {recursive: true}, err => {
+//         })
+//     }
+//     let currentURL = req.protocol + '://' + req.hostname;
+//     let form = new formidable.IncomingForm();
+//     form.uploadDir = dir;
+//     form.on('file', (field, file) => {
+//         let fileType = /\w*\/(\w*)/i.exec(file.type)[1];
+//         console.log(form.uploadDir + '/widget_avatar.' + fileType);
+//         fs.rename(file.path, form.uploadDir + '/widget_avatar.' + fileType, () => {
+//         });
+//     });
+//     form.parse(req, function (err, fields, files) {
+//         let response = '<head><title>Place successfully updated</title></head>' +
+//             '\n' +
+//             '    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500" rel="stylesheet">\n' +
+//             '    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css"\n' +
+//             '          integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">\n' +
+//             '    <link href="../../static/style.css" type="text/css" rel="stylesheet">' +
+//             '<h1 class="header_text">\n' +
+//             '    Entry successfully updated\n' +
+//             '</h1>\n' +
+//             '<a class="entry_edit small" id="home_button" href="..">\n' +
+//             '    <div>Main page <i class="fas fa-home"></i></div>\n' +
+//             '</a>';
+//         if (err) {
+//             console.log('Error uploading');
+//         }
+//         let fileMime = /(\w*)\/(\w*)/i.exec(files.widget_avatar.type);
+//         if (fileMime[1] !== 'image') {
+//             console.log('File not found');
+//             res.send(response);
+//             return;
+//         }
+//         console.log(fileMime);
+//         console.log('File uploaded');
+//         const collection = req.app.locals.collection;
+//         collection.findOneAndUpdate({place_id: req.query.place}, {$set: {widget_avatar: currentURL + '/images/' + req.query.place + '/widget_avatar.' + fileMime[2]}}, (err, result) => {
+//             if (err) {
+//                 // console.log('Error');
+//                 return console.log(err);
+//             }
+//             console.log(result);
+//             res.send(response);
+//         });
+//     });
+// });
+
+router.post('/uploadImage', upload.single('widget_avatar'), async (req, res)=>{
+   let imagePath = path.join(__dirname, '/images/'+req.query.place_id + '/widget_avatar.png');
+   console.log(req.widget_avatar);
+   if (!req.file) {
+       console.log('File not found');
+       res.status(401).json({error: 'Please provide an image'});
+   }
+   sharp(req.file.buffer).resize(50,50,{
+       fit: sharp.fit.inside,
+       withoutEnlargement: true
+   }).toFile(imagePath);
+   console.log('File uploaded to' + imagePath);
+    const collection = req.app.locals.collection;
     let currentURL = req.protocol + '://' + req.hostname;
-    let form = new formidable.IncomingForm();
-    form.uploadDir = dir;
-    form.on('file', (field, file) => {
-        let fileType = /\w*\/(\w*)/i.exec(file.type)[1];
-        console.log(form.uploadDir + '/widget_avatar.' + fileType);
-        fs.rename(file.path, form.uploadDir + '/widget_avatar.' + fileType, () => {
-        });
-    });
-    form.parse(req, function (err, fields, files) {
-        let response = '<head><title>Place successfully updated</title></head>' +
-            '\n' +
-            '    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500" rel="stylesheet">\n' +
-            '    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css"\n' +
-            '          integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">\n' +
-            '    <link href="../../static/style.css" type="text/css" rel="stylesheet">' +
-            '<h1 class="header_text">\n' +
-            '    Entry successfully updated\n' +
-            '</h1>\n' +
-            '<a class="entry_edit small" id="home_button" href="..">\n' +
-            '    <div>Main page <i class="fas fa-home"></i></div>\n' +
-            '</a>';
+    collection.findOneAndUpdate({place_id: req.query.place_id}, {$set: {widget_avatar: currentURL + '/images/' + req.query.place_id + '/widget_avatar.png'}}, (err, result) => {
         if (err) {
-            console.log('Error uploading');
+            // console.log('Error');
+            res.status(401).json({error: err});
         }
-        let fileMime = /(\w*)\/(\w*)/i.exec(files.widget_avatar.type);
-        if (fileMime[1] !== 'image') {
-            console.log('File not found');
-            res.send(response);
-            return;
-        }
-        console.log(fileMime);
-        console.log('File uploaded');
-        const collection = req.app.locals.collection;
-        collection.findOneAndUpdate({place_id: req.query.place}, {$set: {widget_avatar: currentURL + '/images/' + req.query.place + '/widget_avatar.' + fileMime[2]}}, (err, result) => {
-            if (err) {
-                // console.log('Error');
-                return console.log(err);
-            }
-            console.log(result);
-            res.send(response);
-        });
+        res.status(200).json({success: 'File uploaded sucessfully'});
     });
 });
 
