@@ -146,6 +146,7 @@
         }).then((jsonResponse) => {
             // console.log(jsonResponse);
             $('#website_url').val(jsonResponse.website_url);
+            $('#place_id').val(jsonResponse.place_id);
             $('#main_color').val(jsonResponse.main_color);
             $('#main_color').attr('value', jsonResponse.main_color);
             $('#user_color').val(jsonResponse.user_color);
@@ -169,13 +170,14 @@
         });
         $('.call_button').on('click', () => {
             $('#upload_form').submit();
-            let place = $('#place_id').val() || currentPlace;
+            let oldPlace = currentPlace;
+            let newPlace = $('#place_id').val() || currentPlace;
             let website_url = $('#website_url').val();
             let main_color = $('#main_color').val();
             let user_color = $('#user_color').val();
             let default_message = $('#default_message').val() || 'Hello, my name is Gaspar. I will be your sommelier tonight';
             let widget_avatar = $('#widget_avatar').val() || currentAvatar;
-            let data = 'place_id=' + place + '&website_url=' + website_url + '&main_color=' + main_color + '&user_color=' + user_color + '&default_message=' + default_message + '&widget_avatar=' + widget_avatar + '&active=' + active;
+            let data = 'place_id=' + oldPlace + '&new_place=' + newPlace + '&website_url=' + website_url + '&main_color=' + main_color + '&user_color=' + user_color + '&default_message=' + default_message + '&widget_avatar=' + widget_avatar + '&active=' + active;
             // console.log(data);
             let myInit = {
                 method: 'GET',

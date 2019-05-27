@@ -8,12 +8,16 @@ const
     fs = require('fs'),
     formidable = require('formidable'),
     multer = require('multer'),
-    mkdirp = require('mkdirp');
-MongoClient = require('mongodb').MongoClient,
+    mkdirp = require('mkdirp'),
+    jsdom = require('jsdom'),
+    MongoClient = require('mongodb').MongoClient,
     app = express(bodyParser.json()),
     mongoClient = new MongoClient("mongodb://localhost:27017/", {useNewUrlParser: true}),
+    // dom = require('express-jsdom')(app),
     router = express.Router();
 port = 1603;
+
+// dom.use('jquery');
 
 let storage = multer.diskStorage({
     destination: (req, file, callback) => {
@@ -24,6 +28,94 @@ let storage = multer.diskStorage({
     }
 });
 
+let approvedPages = ['/about', '/usage', '/instructions'];
+approvedPages.forEach((address) => {
+    // router.get(address, ()=>{
+    //    res.sendFile(path(__dirname + '/about.html'));
+    // });
+    // $('body').append(`<!--<h1>${address.slice(1, address.length)}</h1>-->`);
+
+
+    router.get(address, (req, res) => {
+        // console.log(req.body);
+        // res.send(path.join(__dirname + address));
+        let currentURL = req.protocol + '://' + req.hostname + address;
+        console.log(currentURL);
+        const {JSDOM} = jsdom;
+        let htmlStructure = `<!DOCTYPE html><html><head><title>${address.slice(1, address.length)}</title></head> <body><h1 class="title">Test</h1></body></html>`;
+        const domStructure = new JSDOM(htmlStructure, {
+            url: currentURL,
+            referrer: currentURL,
+            contentType: 'text/html',
+            includeNodeLocations: true,
+            storageQuota: 10000000,
+            runScripts: 'dangerously'
+        }).window;
+
+        let window = domStructure.window;
+        let document = window.document;
+        let style = document.createElement("style");
+        style.setAttribute("type", "text/css");
+        let head = document.getElementsByTagName('head')[0];
+        head.appendChild(style);
+        style = document.styleSheets[document.styleSheets.length - 1];
+        style.insertRule(".title {color: #f1824a;}");
+        let rule = style.cssRules[0];
+        let styleLine = rule.style;
+        styleLine.color = '#f1824a';
+        // console.log(domStructure);
+        // let header
+        // res.send(window.innerHTML);
+        // console.log(domStructure.window.document);
+        // let test = document.querySelector('h1');
+        // test.textContent = address.slice(1, address.length);
+        // console.log(test.textContent);
+
+        // test.style.color = '#f1824a';
+        // const { JSDOM } = jsdom;
+        // const { window } = new JSDOM();
+        // const { document } = (new JSDOM('')).window;
+        // global.document = document;
+        // let $ = require('jquery')(window);
+        // let title = $('.title');
+        // // title.text(title.);
+        // title.css('cursor', 'pointer');
+        // title.animate({fontSize: '30px', color: '#f1824a'}, 1500, function () {
+        //     $(this).animate({position: 'absolute', right: '100px'}, 1500);
+        // });
+        // title.onclick(()=>{
+        //     console.log(title.text());
+        // });
+
+        // let body = '<body><h1 class="title">You are on ' + addres + '</h1></body>';
+        // console.log(res);
+        // parseData(res);
+    });
+});
+
+// router.get('/about', (req, res)=>{
+   // parseData(req.body, 'about');
+   //  require('jsdom').env("", function(err, window) {
+   //      if (err) {
+   //          console.error(err);
+   //          return;
+   //      }
+   //
+   //      let $ = require("jquery")(window);
+   //      let title = $('.title');
+   //      title.text(titleValue);
+   //      title.animate({fontSize: '30px', color: '#f1824a'}, 1500, function () {
+   //          $(this).animate({position: 'absolute', right: '100px'}, 1500);
+   //      });
+   //  });
+
+    // let currentURL = req.protocol + '://' + req.hostname;
+    // const {JSDOM} = jsdom;
+    // const domStructure = new JSDOM(``, {
+    //     url: currentURL
+    // });
+// });
+
 let upload = multer({storage: storage}).single('userPhoto');
 
 app.use('/', router);
@@ -33,6 +125,7 @@ mongoClient.connect((err, client) => {
     }
     app.locals.collection = client.db("wine_picker").collection('places');
 });
+
 app.listen(port, (err, req, res) => {
     if (err) return console.log(`Something bad has happen : ${err}`);
     console.log(`Server listening at port ${port}`);
@@ -85,6 +178,14 @@ router.get('/editPlace', (req, res) => {
         // console.log(result);
         res.send(result);
     });
+    collection.updateOne({place_id: req.query.place_id}, {$set: {place_id: req.query.new_place}}, (err, result) => {
+        if (err) {
+            console.log('Error');
+            return console.log(err);
+        }
+        console.log('Updated');
+        // res.send(result);
+    });
 });
 
 router.get('/new', (req, res) => {
@@ -134,12 +235,13 @@ router.post('/uploadImage', (req, res) => {
     form.uploadDir = dir;
     form.on('file', (field, file) => {
         let fileType = /\w*\/(\w*)/i.exec(file.type)[1];
-        console.log(form.uploadDir + '/widget_avatar.'+fileType);
-        fs.rename(file.path, form.uploadDir + '/widget_avatar.'+fileType, () => {
+        console.log(form.uploadDir + '/widget_avatar.' + fileType);
+        fs.rename(file.path, form.uploadDir + '/widget_avatar.' + fileType, () => {
         });
     });
     form.parse(req, function (err, fields, files) {
-        let response = '\n' +
+        let response = '<head><title>Place successfully updated</title></head>' +
+            '\n' +
             '    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500" rel="stylesheet">\n' +
             '    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css"\n' +
             '          integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">\n' +
@@ -153,15 +255,16 @@ router.post('/uploadImage', (req, res) => {
         if (err) {
             console.log('Error uploading');
         }
-        let fileMime = /(\w*)\/\w*/i.exec(files.widget_avatar.type)[1];
-        if (fileMime !== 'image') {
+        let fileMime = /(\w*)\/(\w*)/i.exec(files.widget_avatar.type);
+        if (fileMime[1] !== 'image') {
             console.log('File not found');
             res.send(response);
             return;
         }
+        console.log(fileMime);
         console.log('File uploaded');
         const collection = req.app.locals.collection;
-        collection.findOneAndUpdate({place_id: req.query.place}, {$set: {widget_avatar: currentURL + '/images/' + req.query.place + '/widget_avatar.png'}}, (err, result) => {
+        collection.findOneAndUpdate({place_id: req.query.place}, {$set: {widget_avatar: currentURL + '/images/' + req.query.place + '/widget_avatar.' + fileMime[2]}}, (err, result) => {
             if (err) {
                 // console.log('Error');
                 return console.log(err);
